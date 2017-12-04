@@ -81,13 +81,13 @@ class IrcLogPathBuilder(object):
         aPath = os.path.join(self.__getBasePath(),
                              window,
                              "*.log")
-        return [os.path.basename(fn).replace(".log", "")
-                for fn in glob.glob(aPath)]
+        return sorted([os.path.basename(fn).replace(".log", "")
+                       for fn in glob.glob(aPath)])
 
     def GetWinList(self):
         aPath = os.path.join(self.__getBasePath(), "*")
-        return [os.path.basename(fn)
-                for fn in glob.glob(aPath) if os.path.isdir(fn)]
+        return sorted([os.path.basename(fn)
+                       for fn in glob.glob(aPath) if os.path.isdir(fn)])
 
 
 class IrcLog(object):
@@ -278,7 +278,7 @@ class LogDatesCommand(AbstractLogViewerCommand):
             self.Print(
                 "List of all available log date for window {0}:".format(
                     aWindow))
-            for d in sorted(aDates):
+            for d in aDates:
                 self.Print(d)
         else:
             self.PrintErr("No such logs for window {0}".format(aWindow))
@@ -301,7 +301,7 @@ class LogWindowsCommand(AbstractLogViewerCommand):
         if len(aWins) > 0:
             self.Print(
                 "List of all available windows:")
-            for w in sorted(aWins):
+            for w in aWins:
                 self.Print(w)
         else:
             self.PrintErr("No such windows logs")
