@@ -5,8 +5,6 @@ import sys
 import re
 import glob
 
-sys.dont_write_bytecode = False
-
 
 class logviewer(znc.Module):
     description = "View and search logs directly from IRC client"
@@ -17,6 +15,7 @@ class logviewer(znc.Module):
             self.__cmdDispatcher = LogViewerCommandDispatcher(self)
             self.__cmdDispatcher.AddCommand(LogCatCommand(self))
             self.__cmdDispatcher.AddCommand(LogGrepCommand(self))
+            self.__cmdDispatcher.AddCommand(LogsGrepCommand(self))
             self.__cmdDispatcher.AddCommand(LogDatesCommand(self))
             self.__cmdDispatcher.AddCommand(LogWindowsCommand(self))
         except Exception as e:
@@ -82,11 +81,13 @@ class IrcLogPathBuilder(object):
         aPath = os.path.join(self.__getBasePath(),
                              window,
                              "*.log")
-        return [os.path.basename(fn).replace(".log", "") for fn in glob.glob(aPath)]
+        return [os.path.basename(fn).replace(".log", "")
+                for fn in glob.glob(aPath)]
 
     def GetWinList(self):
         aPath = os.path.join(self.__getBasePath(), "*")
-        return [os.path.basename(fn) for fn in glob.glob(aPath) if os.path.isdir(fn)]
+        return [os.path.basename(fn)
+                for fn in glob.glob(aPath) if os.path.isdir(fn)]
 
 
 class IrcLog(object):
@@ -227,7 +228,7 @@ class LogGrepCommand(AbstractLogViewerCommand):
         self._setDescription(
             "Grep log file for window and date (current network) with regex.")
 
-    def __grepLog(self, window, date, regex):
+    def _grepLog(self, window, date, regex):
         aIrcLog = IrcLog(self.GetNetwork(),
                          self.GetUser(),
                          window,
@@ -255,7 +256,7 @@ class LogGrepCommand(AbstractLogViewerCommand):
         aWindow = args[0]
         aDate = args[1]
         aRegex = args[2]
-        self.__grepLog(aWindow, aDate, aRegex)
+        self._grepLog(aWindow, aDate, aRegex)
 
 
 class LogDatesCommand(AbstractLogViewerCommand):
@@ -275,7 +276,8 @@ class LogDatesCommand(AbstractLogViewerCommand):
         aDates = aPathBuilder.GetLogsDates(aWindow)
         if len(aDates) > 0:
             self.Print(
-                "List of all available log date for window {0}:".format(aWindow))
+                "List of all available log date for window {0}:".format(
+                    aWindow))
             for d in sorted(aDates):
                 self.Print(d)
         else:
@@ -303,3 +305,23 @@ class LogWindowsCommand(AbstractLogViewerCommand):
                 self.Print(w)
         else:
             self.PrintErr("No such windows logs")
+
+
+class LogsGrepCommand(LogGrepCommand):
+    def __init__(self, module):
+        super().__init__(module)
+        self._setCommand("LogsGrep")
+        self._setArgumentString("<window> <regex>")
+        self._setDescription(
+            "Grep log files for window and all "
+            "dates (current network) with regex.")
+
+    def _DoPerform(self, args):
+        if len(args) != 2:
+            self.Help()
+            return
+        aWindow = args[0]
+        aRegex = args[1]
+        aPathBuilder = IrcLogPathBuilder(self.GetNetwork(), self.GetUser())
+        for aDate in aPathBuilder.GetLogsDates(aWindow):
+            self._grepLog(aWindow, aDate, aRegex)
